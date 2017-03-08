@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+[ -n "$1" -a -n "$2" ] || exit 1
+
+PIDFILE=$2.pid
+PGIDFILE=$2.pgid
+
+case $1 in
+
+    'start')
+        setsid `bash ./$2 & printf "%i" $! > $PIDFILE && printf "%i" $$ > $PGIDFILE` &
+        while [ ! -f "$PGIDFILE" -o ! -f "$PIDFILE" ]; do sleep 0.1; done;
+        for i in $(seq 0 2); do
+            gdb --batch-silent -p $(cat $PIDFILE) -ex "call close($i)" 2>/dev/null
+        done
+        sleep 0.5
+        kill -15 $!
+        
+
+    ;;
+
+    'stop')
+
+      [ -f $PIDFILE ] && {
+                           pkill -g $(cat $PGIDFILE)
+                           rm "$PIDFILE" "$PGIDFILE"
+                         }
+                  
+    ;;
+
+    'status')
+
+       [ -f $PIDFILE ] && pgrep -g $(cat $PGIDFILE) | xargs ps -o "%U %p %P %r %a"
+
+esac
+
+
+
+
+
+
+
+

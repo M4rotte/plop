@@ -21,16 +21,20 @@ case $1 in
 
     'stop')
 
-      [ -f $PIDFILE ] && {
+      [ -f $PGIDFILE ] && {
                            pkill -g $(cat $PGIDFILE)
-                           rm "$PIDFILE" "$PGIDFILE"
+                           rm "$PGIDFILE"
                          }
+                         
+      [ -f $PIDFILE ] && {
+                           rm "$PIDFILE"
+                         }                   
                   
     ;;
 
     'status')
 
-       [ -f $PIDFILE ] && pgrep -g $(cat $PGIDFILE) | xargs ps -o "%U %p %P %r %a"
+       [ -f $PGIDFILE ] && pgrep -g $(cat $PGIDFILE) | xargs ps -o "%U %p %P %r %a"
 
 esac
 

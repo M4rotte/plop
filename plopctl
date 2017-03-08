@@ -1,21 +1,24 @@
 #!/usr/bin/env bash
 
-[ -n "$1" -a -n "$2" ] || exit 1
+[ -n "$1" -a -n "$2" ] || { printf "Usage: $0 <action> <daemon>\n" && exit 1; }
 
-PIDFILE=$2.pid
-PGIDFILE=$2.pgid
+RUNDIR="$XDG_RUNTIME_DIR/$2"
+mkdir "$XDG_RUNTIME_DIR/$2" 2>/dev/null
+
+PIDFILE="$RUNDIR/$2.pid"
+PGIDFILE="$RUNDIR/$2.pgid"
 
 case $1 in
 
     'start')
+    
         setsid `bash ./$2 & printf "%i" $! > $PIDFILE && printf "%i" $$ > $PGIDFILE` &
-        while [ ! -f "$PGIDFILE" -o ! -f "$PIDFILE" ]; do sleep 0.1; done;
+        while [ ! -f "$PGIDFILE" -o ! -f "$PIDFILE" ]; do sleep 0.01; done;
         for i in $(seq 0 2); do
             gdb --batch-silent -p $(cat $PIDFILE) -ex "call close($i)" 2>/dev/null
         done
         sleep 0.5
         kill -15 $!
-        
 
     ;;
 
@@ -24,12 +27,12 @@ case $1 in
       [ -f $PGIDFILE ] && {
                            pkill -g $(cat $PGIDFILE)
                            rm "$PGIDFILE"
-                         }
+                          }
                          
-      [ -f $PIDFILE ] && {
-                           rm "$PIDFILE"
-                         }                   
-                  
+      [ -f $PIDFILE ] && rm "$PIDFILE"
+                         
+      [ -d $RUNDIR ] && rmdir "$RUNDIR"
+            
     ;;
 
     'status')

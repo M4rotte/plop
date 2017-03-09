@@ -3,7 +3,7 @@
 [ -n "$1" -a -n "$2"    ] || { printf "Usage: $0 <action> <daemon>\n" 1>&2 && exit 1; }
 [ -x "$(which gdb)"     ] || { printf "gdb not found in $PATH\n" 1>&2 && exit 2; }
 [ -x "$(which setsid)"  ] || { printf "setsid not found in $PATH\n" 1>&2 && exit 3; }
-[ -n "$XDG_RUNTIME_DIR" ] || XDG_RUNTIME_DIR='/tmp'
+[ -n "$XDG_RUNTIME_DIR" ] || { mkdir "/tmp/$USER" && XDG_RUNTIME_DIR="/tmp/$USER"; }
 
 PLOP_NAME=$(basename $2)
 

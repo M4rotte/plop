@@ -24,6 +24,7 @@ case $1 in
 
     'start')
     
+        [ -f "$PIDFILE" ] && { printf "A process named '$NAME' is already running with PID $(cat $PIDFILE), PGID $(cat $PGIDFILE).\n" && exit 11; }
         [[ "$2" = /* ]] && PRG="$2" || PRG="$(pwd)/$2"
         SCRIPT="cd / && umask 0 && $PRG"
         setsid `bash -c "$SCRIPT" & printf "%i" $! > $PIDFILE && printf "%i" $$ > $PGIDFILE` &

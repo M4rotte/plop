@@ -2,7 +2,7 @@
 
 plop is a Bash script for GNU/Linux systems that daemonizes any program given as argument while permitting to keep control over it.
 
-plop consists of a single shell script. Managed processes (for a given user) are identified by their basename. PID and PGID are stored in files in $XDG_RUNTIME_DIR (or /tmp if undefined).
+plop consists of a single shell script. Managed processes (for a given user) are identified by their basename. PID and PGID are stored in files in $XDG_RUNTIME_DIR (or /tmp/$USER if undefined).
 
 Current possible actions are:
 

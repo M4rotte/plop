@@ -15,6 +15,7 @@ PGIDFILE="$RUNDIR/$NAME.pgid"
 
 function detach {
     
+    # Close standard file descriptors of process with pid $1
     gdb --batch-silent -p $1 -ex "call close(0)" \
                              -ex "call close(1)" \
                              -ex "call close(2)" 2>/dev/null
@@ -24,6 +25,8 @@ case $1 in
 
     'start')
     
+        # If no process with provided name already running:
+        # daemonize the process, keep PID and PGID in a file
         [ -f "$PIDFILE" ] && { printf "A process named '$NAME' is already running with PID $(cat $PIDFILE), PGID $(cat $PGIDFILE).\n" && exit 11; }
         [[ "$2" = /* ]] && PRG="$2" || PRG="$(pwd)/$2"
         SCRIPT="cd / && umask 0 && $PRG"
@@ -36,6 +39,8 @@ case $1 in
 
     'stop')
 
+      # Stop group of processes according to provided name, getting pgid from the pgid file
+      # Remove pid and pgid files, also $RUNDIR if empty
       [ -f $PGIDFILE ] && {
                            pkill -g $(cat $PGIDFILE)
                            [ ! $? ] && printf "No process matched PGID $(cat $PGIDFILE)!\n" 1>&2 \
@@ -51,6 +56,7 @@ case $1 in
 
     'status')
 
+        # Show processes belonging to the process group for provided name
         [ ! -f $PIDFILE ] && printf "$PIDFILE does not exist.\n"
         [ -f $PGIDFILE ] && pgrep -g $(cat $PGIDFILE) | xargs ps -o "%U %p %P %r %a"
 
@@ -58,6 +64,7 @@ case $1 in
 
     'attach')
     
+        # Attach stdout and stderr file descriptors of the current terminal to fds 1 and 2 of the corresponding process
         [ ! -f $PIDFILE ] && { printf "$PIDFILE does not exist.\n" 1>&2 && exit 10; }
         GDBCMDOUT="call open(\"/proc/$$/fd/1\",1)"
         GDBCMDERR="call open(\"/proc/$$/fd/2\",2)"
@@ -70,8 +77,10 @@ case $1 in
 
     ;;
 
+    
     'detach')
     
+        # Detach process’s fds 0 to 2
         [ ! -f $PIDFILE ] && { printf "$PIDFILE does not exist.\n" 1>&2 && exit 10; }
         detach $(cat $PIDFILE)
     

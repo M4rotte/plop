@@ -12,4 +12,4 @@ Current possible actions are:
  - attach: Attach stdout and stderr of the current terminal to file descriptors 1 and 2 of the daemon
  - detach: Close file descriptors 0, 1 and 2 of the daemon
 
-
+The file 'example' provide a minimal… example… of a executable that can be run by plop. As you can see, there is no specific need and plop should be able to run any executable without modification. Programs run by plop don’t need to fork by themselves (and probably shouldn’t…).

@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 
-[ -n "$1" -a -n "$2" ] || { printf "Usage: $0 <action> <daemon>\n" && exit 1; }
+[ -n "$1" -a -n "$2"    ] || { printf "Usage: $0 <action> <daemon>\n" 1>&2 && exit 1; }
+[ -x "$(which gdb)"     ] || { printf "gdb not found in $PATH\n" 1>&2 && exit 2; }
+[ -x "$(which setsid)"  ] || { printf "setsid not found in $PATH\n" 1>&2 && exit 3; }
+[ -n "$XDG_RUNTIME_DIR" ] || XDG_RUNTIME_DIR='/tmp'
 
-RUNDIR="$XDG_RUNTIME_DIR/$2"
-mkdir "$XDG_RUNTIME_DIR/$2" 2>/dev/null
+NAME=$(basename $2)
 
-PIDFILE="$RUNDIR/$2.pid"
-PGIDFILE="$RUNDIR/$2.pgid"
+RUNDIR="$XDG_RUNTIME_DIR/$NAME"
+mkdir "$XDG_RUNTIME_DIR/$NAME" 2>/dev/null
+
+PIDFILE="$RUNDIR/$NAME.pid"
+PGIDFILE="$RUNDIR/$NAME.pgid"
 
 function detach {
     
@@ -19,7 +24,8 @@ case $1 in
 
     'start')
     
-        SCRIPT="cd / && umask 0 && $(pwd)/$2"
+        [[ "$2" = /* ]] && PRG="$2" || PRG="$(pwd)/$2"
+        SCRIPT="cd / && umask 0 && $PRG"
         setsid `bash -c "$SCRIPT" & printf "%i" $! > $PIDFILE && printf "%i" $$ > $PGIDFILE` &
         while [ ! -f "$PGIDFILE" -o ! -f "$PIDFILE" ]; do sleep 0.01; done;
         detach $(cat $PIDFILE)
@@ -51,7 +57,7 @@ case $1 in
 
     'attach')
     
-        [ ! -f $PIDFILE ] && { printf "$PIDFILE does not exist.\n" 1>&2 && exit 2; }
+        [ ! -f $PIDFILE ] && { printf "$PIDFILE does not exist.\n" 1>&2 && exit 10; }
         GDBCMDOUT="call open(\"/proc/$$/fd/1\",1)"
         GDBCMDERR="call open(\"/proc/$$/fd/2\",2)"
         gdb --batch-silent -p $(cat $PIDFILE) -ex "call close(0)" \
@@ -65,7 +71,7 @@ case $1 in
 
     'detach')
     
-        [ ! -f $PIDFILE ] && { printf "$PIDFILE does not exist.\n" 1>&2 && exit 2; }
+        [ ! -f $PIDFILE ] && { printf "$PIDFILE does not exist.\n" 1>&2 && exit 10; }
         detach $(cat $PIDFILE)
     
 esac

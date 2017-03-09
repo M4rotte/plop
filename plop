@@ -5,13 +5,13 @@
 [ -x "$(which setsid)"  ] || { printf "setsid not found in $PATH\n" 1>&2 && exit 3; }
 [ -n "$XDG_RUNTIME_DIR" ] || XDG_RUNTIME_DIR='/tmp'
 
-NAME=$(basename $2)
+PLOP_NAME=$(basename $2)
 
-RUNDIR="$XDG_RUNTIME_DIR/$NAME"
-mkdir "$XDG_RUNTIME_DIR/$NAME" 2>/dev/null
+PLOP_RUNDIR="$XDG_RUNTIME_DIR/$PLOP_NAME"
+mkdir "$XDG_RUNTIME_DIR/$PLOP_NAME" 2>/dev/null
 
-PIDFILE="$RUNDIR/$NAME.pid"
-PGIDFILE="$RUNDIR/$NAME.pgid"
+PLOP_PIDFILE="$PLOP_RUNDIR/$PLOP_NAME.pid"
+PLOP_PGIDFILE="$PLOP_RUNDIR/$PLOP_NAME.pgid"
 
 function detach {
     
@@ -27,12 +27,12 @@ case $1 in
     
         # If no process with provided name already running:
         # daemonize the process, keep PID and PGID in a file
-        [ -f "$PIDFILE" ] && { printf "A process named '$NAME' is already running with PID $(cat $PIDFILE), PGID $(cat $PGIDFILE).\n" && exit 11; }
-        [[ "$2" = /* ]] && PRG="$2" || PRG="$(pwd)/$2"
-        SCRIPT="cd / && umask 0 && $PRG"
-        setsid `bash -c "$SCRIPT" & printf "%i" $! > $PIDFILE && printf "%i" $$ > $PGIDFILE` &
-        while [ ! -f "$PGIDFILE" -o ! -f "$PIDFILE" ]; do sleep 0.01; done;
-        detach $(cat $PIDFILE)
+        [ -f "$PLOP_PIDFILE" ] && { printf "A process named '$NAME' is already running with PID $(cat $PLOP_PIDFILE), PGID $(cat $PLOP_PGIDFILE).\n" && exit 11; }
+        [[ "$2" = /* ]] && PLOP_PRG="$2" || PLOP_PRG="$(pwd)/$2"
+        PLOP_SCRIPT="cd / && umask 0 && $PLOP_PRG"
+        setsid `bash -c "$PLOP_SCRIPT" & printf "%i" $! > $PLOP_PIDFILE && printf "%i" $$ > $PLOP_PGIDFILE` &
+        while [ ! -f "$PLOP_PGIDFILE" -o ! -f "$PLOP_PIDFILE" ]; do sleep 0.01; done;
+        detach $(cat $PLOP_PIDFILE)
         kill -15 $!
 
     ;;
@@ -40,35 +40,35 @@ case $1 in
     'stop')
 
       # Stop group of processes according to provided name, getting pgid from the pgid file
-      # Remove pid and pgid files, also $RUNDIR if empty
-      [ -f $PGIDFILE ] && {
-                           pkill -g $(cat $PGIDFILE)
-                           [ ! $? ] && printf "No process matched PGID $(cat $PGIDFILE)!\n" 1>&2 \
-                                    || printf "Processes in PGID $(cat $PGIDFILE) have been killed.\n"
-                           rm "$PGIDFILE"
+      # Remove pid and pgid files, also $PLOP_RUNDIR if empty
+      [ -f $PLOP_PGIDFILE ] && {
+                           pkill -g $(cat $PLOP_PGIDFILE)
+                           [ ! $? ] && printf "No process matched PGID $(cat $PLOP_PGIDFILE)!\n" 1>&2 \
+                                    || printf "Processes in PGID $(cat $PLOP_PGIDFILE) have been killed.\n"
+                           rm "$PLOP_PGIDFILE"
                           } || printf "No PGID file.\n" 1>&2
                          
-      [ -f $PIDFILE ] && rm "$PIDFILE"
+      [ -f $PLOP_PIDFILE ] && rm "$PLOP_PIDFILE"
                          
-      [ -d $RUNDIR ] && rmdir "$RUNDIR"
+      [ -d $PLOP_RUNDIR ] && rmdir "$PLOP_RUNDIR"
                   
     ;;
 
     'status')
 
         # Show processes belonging to the process group for provided name
-        [ ! -f $PIDFILE ] && printf "$PIDFILE does not exist.\n"
-        [ -f $PGIDFILE ] && pgrep -g $(cat $PGIDFILE) | xargs ps -o "%U %p %P %r %a"
+        [ ! -f $PLOP_PIDFILE ] && printf "$PLOP_PIDFILE does not exist.\n"
+        [ -f $PLOP_PGIDFILE ] && pgrep -g $(cat $PLOP_PGIDFILE) | xargs ps -o "%U %p %P %r %a"
 
     ;;
 
     'attach')
     
         # Attach stdout and stderr file descriptors of the current terminal to fds 1 and 2 of the corresponding process
-        [ ! -f $PIDFILE ] && { printf "$PIDFILE does not exist.\n" 1>&2 && exit 10; }
+        [ ! -f $PLOP_PIDFILE ] && { printf "$PLOP_PIDFILE does not exist.\n" 1>&2 && exit 10; }
         GDBCMDOUT="call open(\"/proc/$$/fd/1\",1)"
         GDBCMDERR="call open(\"/proc/$$/fd/2\",2)"
-        gdb --batch-silent -p $(cat $PIDFILE) -ex "call close(0)" \
+        gdb --batch-silent -p $(cat $PLOP_PIDFILE) -ex "call close(0)" \
                                               -ex "call close(1)" \
                                               -ex "call close(2)" \
                                               -ex "call open(\"/dev/null\", 0)" \
@@ -81,8 +81,8 @@ case $1 in
     'detach')
     
         # Detach process’s fds 0 to 2
-        [ ! -f $PIDFILE ] && { printf "$PIDFILE does not exist.\n" 1>&2 && exit 10; }
-        detach $(cat $PIDFILE)
+        [ ! -f $PLOP_PIDFILE ] && { printf "$PLOP_PIDFILE does not exist.\n" 1>&2 && exit 10; }
+        detach $(cat $PLOP_PIDFILE)
     
 esac
 

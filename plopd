@@ -2,8 +2,8 @@
 
 while true; do
 
-    echo "plop" # echoing nowhere !
-    sleep 11
+    printf "plop!\n"
+    sleep 7
 
 done
 

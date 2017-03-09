@@ -8,16 +8,21 @@ mkdir "$XDG_RUNTIME_DIR/$2" 2>/dev/null
 PIDFILE="$RUNDIR/$2.pid"
 PGIDFILE="$RUNDIR/$2.pgid"
 
+function detach {
+    
+    gdb --batch-silent -p $1 -ex "call close(0)" \
+                             -ex "call close(1)" \
+                             -ex "call close(2)" 2>/dev/null
+    }    
+
 case $1 in
 
     'start')
     
-        setsid `bash ./$2 & printf "%i" $! > $PIDFILE && printf "%i" $$ > $PGIDFILE` &
+        SCRIPT="cd / && umask 0 && $(pwd)/$2"
+        setsid `bash -c "$SCRIPT" & printf "%i" $! > $PIDFILE && printf "%i" $$ > $PGIDFILE` &
         while [ ! -f "$PGIDFILE" -o ! -f "$PIDFILE" ]; do sleep 0.01; done;
-        for i in $(seq 0 2); do
-            gdb --batch-silent -p $(cat $PIDFILE) -ex "call close($i)" 2>/dev/null
-        done
-        sleep 0.5
+        detach $(cat $PIDFILE)
         kill -15 $!
 
     ;;
@@ -26,19 +31,43 @@ case $1 in
 
       [ -f $PGIDFILE ] && {
                            pkill -g $(cat $PGIDFILE)
+                           [ ! $? ] && printf "No process matched PGID $(cat $PGIDFILE)!\n" 1>&2 \
+                                    || printf "Processes in PGID $(cat $PGIDFILE) have been killed.\n"
                            rm "$PGIDFILE"
-                          }
+                          } || printf "No PGID file.\n" 1>&2
                          
       [ -f $PIDFILE ] && rm "$PIDFILE"
                          
       [ -d $RUNDIR ] && rmdir "$RUNDIR"
-            
+                  
     ;;
 
     'status')
 
-       [ -f $PGIDFILE ] && pgrep -g $(cat $PGIDFILE) | xargs ps -o "%U %p %P %r %a"
+        [ ! -f $PIDFILE ] && printf "$PIDFILE does not exist.\n"
+        [ -f $PGIDFILE ] && pgrep -g $(cat $PGIDFILE) | xargs ps -o "%U %p %P %r %a"
 
+    ;;
+
+    'attach')
+    
+        [ ! -f $PIDFILE ] && { printf "$PIDFILE does not exist.\n" 1>&2 && exit 2; }
+        GDBCMDOUT="call open(\"/proc/$$/fd/1\",1)"
+        GDBCMDERR="call open(\"/proc/$$/fd/2\",2)"
+        gdb --batch-silent -p $(cat $PIDFILE) -ex "call close(0)" \
+                                              -ex "call close(1)" \
+                                              -ex "call close(2)" \
+                                              -ex "call open(\"/dev/null\", 0)" \
+                                              -ex "$GDBCMDOUT" \
+                                              -ex "$GDBCMDERR" 2>/dev/null
+
+    ;;
+
+    'detach')
+    
+        [ ! -f $PIDFILE ] && { printf "$PIDFILE does not exist.\n" 1>&2 && exit 2; }
+        detach $(cat $PIDFILE)
+    
 esac
 
 

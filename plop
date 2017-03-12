@@ -6,6 +6,7 @@
 [ -n "$XDG_RUNTIME_DIR" ] || { mkdir "/tmp/$USER" && XDG_RUNTIME_DIR="/tmp/$USER"; }
 
 PLOP_NAME=$(basename $2)
+PLOP_ARGS="${@: 2}"
 
 PLOP_RUNDIR="$XDG_RUNTIME_DIR/$PLOP_NAME"
 mkdir "$XDG_RUNTIME_DIR/$PLOP_NAME" 2>/dev/null
@@ -27,8 +28,8 @@ case $1 in
     
         # If no process with provided name already running:
         # daemonize the process, keep PID and PGID in a file
-        [ -f "$PLOP_PIDFILE" ] && { printf "A process named '$NAME' is already running with PID $(cat $PLOP_PIDFILE), PGID $(cat $PLOP_PGIDFILE).\n" && exit 11; }
-        [[ "$2" = /* ]] && PLOP_PRG="$2" || PLOP_PRG="$(pwd)/$2"
+        [ -f "$PLOP_PIDFILE" ] && { printf "A process named '$PLOP_NAME' is already running with PID $(cat $PLOP_PIDFILE), PGID $(cat $PLOP_PGIDFILE).\n" && exit 11; }
+        [[ "$2" = /* ]] && PLOP_PRG="$PLOP_ARGS" || PLOP_PRG="$(pwd)/$PLOP_ARGS"
         PLOP_SCRIPT="cd / && umask 0 && $PLOP_PRG"
         setsid `bash -c "$PLOP_SCRIPT" & printf "%i" $! > $PLOP_PIDFILE && printf "%i" $$ > $PLOP_PGIDFILE` &
         while [ ! -f "$PLOP_PGIDFILE" -o ! -f "$PLOP_PIDFILE" ]; do sleep 0.01; done;
